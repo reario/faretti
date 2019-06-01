@@ -102,6 +102,10 @@ uint16_t interruttore (modbus_t *m, uint16_t R, const uint8_t COIL, const uint8_
 int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
 
   char errmsg[100];
+  // IMPORTANTE: ormask e and mask sono costruite tenendo conto di:
+  // nella and_mask ci sono 0 per i bit che cambiano
+  // nella or_mask c'è un 1 se il bit 0->1 e uno 0 se 1->0
+  // nella or_mask contano solo i bit che cambiano. Gli altri bit sono ininfluenti
   uint16_t and_mask = ~coils;
   uint16_t or_mask  = actions;
 
@@ -136,7 +140,6 @@ int main () {
     exit(EXIT_FAILURE);
   }
   /**************************************************/
-  
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), COFF(FARI_ESTERNI_SOPRA) | COFF(FARI_ESTERNI_SOTTO) );
   sleep(1);
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), COFF(FARI_ESTERNI_SOPRA) | CON(FARI_ESTERNI_SOTTO) );
