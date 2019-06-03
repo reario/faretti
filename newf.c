@@ -1,3 +1,17 @@
+/*
+  faretti esterni a riga di comando: newf [-r ON|OFF] [-s ON|OFF]
+  esempio: 
+
+  newf -r ON -s OFF (accende sopra e spegne sotto)
+  newf -r OFF -s OFF (spegne sopra e spegne sotto)
+  newf -r ON -s ON (accende sopra e accende sotto)
+
+  r: faretti sopra
+  s: faretti sotto
+
+*/
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -21,6 +35,20 @@
 #define COFF(what) (0<<(what))
 
 #define LOG_FILE "/home/reario/faretti/faretti.log"
+
+#define SOPRAON(m,reg)  (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOPRA)), ((CON (FARI_ESTERNI_SOPRA)))))
+#define SOPRAOFF(m,reg) (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOPRA)), ((COFF(FARI_ESTERNI_SOPRA)))))
+
+#define SOTTOON(m,reg)  (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOTTO)), ((CON (FARI_ESTERNI_SOTTO)))))
+#define SOTTOOFF(m,reg) (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOTTO)), ((COFF(FARI_ESTERNI_SOTTO)))))
+
+#define SOPRASOTTOON(m,reg) (operate(  (m),(reg), ( (1<<FARI_ESTERNI_SOTTO) | (1<<FARI_ESTERNI_SOPRA) ), ( CON(FARI_ESTERNI_SOTTO) | CON (FARI_ESTERNI_SOPRA))))
+#define SOPRASOTTOOFF(m,reg) (operate(  (m),(reg),( (1<<FARI_ESTERNI_SOTTO) | (1<<FARI_ESTERNI_SOPRA) ), ( COFF(FARI_ESTERNI_SOTTO)| COFF(FARI_ESTERNI_SOPRA))))
+
+#define SOTTOONSOPRAOFF(m,reg)  (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOTTO)|(1<<FARI_ESTERNI_SOPRA)), ((1<<FARI_ESTERNI_SOTTO)|(0<<FARI_ESTERNI_SOPRA))))
+#define SOTTOOFFSOPRAON(m,reg)  (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOTTO)|(1<<FARI_ESTERNI_SOPRA)), ((0<<FARI_ESTERNI_SOTTO)|(1<<FARI_ESTERNI_SOPRA))))
+#define SOTTOONSOPRAON(m,reg)  (operate(  (m),(reg), ((1<<FARI_ESTERNI_SOTTO)|(1<<FARI_ESTERNI_SOPRA)), ((1<<FARI_ESTERNI_SOTTO)|(1<<FARI_ESTERNI_SOPRA))))
+
 
 void printbitssimple(uint16_t n) {
   /*dato l'intero n stampa la rappresentazione binaria*/
@@ -103,9 +131,11 @@ int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
 
   char errmsg[100];
   // IMPORTANTE: ormask e and mask sono costruite tenendo conto di:
-  // nella and_mask ci sono 0 per i bit che cambiano
-  // nella or_mask c'è un 1 se il bit 0->1 e uno 0 se 1->0
+  // nella and_mask ci sono 0 per i bit che cambiano e 1 per quelli che non cambiano
+  // nella or_mask c'è 1 se il bit va da 0->1 e c'è 0 se il bit va da 1->0
   // nella or_mask contano solo i bit che cambiano. Gli altri bit sono ininfluenti
+  // AND_MASK: per ogni bit che cambia metto 1: (1<<BITa)|(1<<BITb)|.....(BITn) e poi faccio la negazione trovandomi 0 dove cambiano e 1 dove rimangono invariati
+  // OR_MASK: se 0->1 (1<<BITa), se 1->0 (0<<BITb) facendo l'OR di tutti 
   uint16_t and_mask = ~coils;
   uint16_t or_mask  = actions;
 
@@ -114,6 +144,7 @@ int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
     logvalue(LOG_FILE,errmsg);
     return -1;
   }
+
   return 0; 
 
   /* printf("prima R = "); */
@@ -123,7 +154,7 @@ int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
   /* printbitssimple(R); */
 }
 
-int main () {
+int main (int argc, char *argv[]) {
   
   modbus_t *mb_otb;
   const uint32_t otb_response_timeout_sec = 2;
@@ -139,7 +170,71 @@ int main () {
     logvalue(LOG_FILE,errmsg);
     exit(EXIT_FAILURE);
   }
-  /**************************************************/
+
+  //-------------------------------------------------
+  int opt;
+  // put ':' in the starting of the
+  // string so that program can
+  //distinguish between '?' and ':'
+  while((opt = getopt(argc, argv, ":r:s:")) != -1)
+    {
+      switch(opt)
+	{
+	case 'r':
+	  printf("r: %s\n", optarg);
+	  if (strcmp(optarg,"ON") == 0) {
+	    SOPRAON(mb_otb, OTB_OUT);
+	  } else if (strcmp(optarg,"OFF") == 0) {
+	    SOPRAOFF(mb_otb, OTB_OUT);
+	  } else {printf("Argomento per r non valido\n");}
+	  break;
+	case 's':
+	  printf("s: %s\n", optarg);
+	  if (strcmp(optarg,"ON") == 0) {
+	    SOTTOON(mb_otb, OTB_OUT);
+	  } else if (strcmp(optarg,"OFF") == 0) {
+	    SOTTOOFF(mb_otb, OTB_OUT);
+	  } else {printf("Argomento per r non valido\n");}
+	  
+	  break;
+	case ':':
+	  printf("option needs a value\n");
+	  break;
+	case '?':
+	  printf("unknown option: %c\n", optopt);
+	break;
+	}
+    }  
+  //-------------------------------------------------
+  
+  /*
+  SOPRAON(mb_otb, OTB_OUT);
+  sleep(1);
+  SOPRAOFF(mb_otb, OTB_OUT);
+
+  SOTTOON(mb_otb, OTB_OUT);
+  sleep(1);
+  SOTTOOFF(mb_otb, OTB_OUT);
+  sleep(2);
+  SOPRASOTTOON(mb_otb, OTB_OUT);
+  sleep(1);
+
+
+  SOTTOONSOPRAOFF(mb_otb, OTB_OUT);
+  sleep(2);
+  SOTTOOFFSOPRAON(mb_otb, OTB_OUT);
+  sleep(2);
+  SOPRASOTTOOFF(mb_otb, OTB_OUT);
+  sleep(2);
+  SOTTOONSOPRAON(mb_otb, OTB_OUT);
+  sleep(2);
+  SOPRASOTTOOFF(mb_otb, OTB_OUT);
+
+  //SOPRASOTTOOFF(mb_otb, OTB_OUT);
+  */
+
+  
+  /**************************************************
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), COFF(FARI_ESTERNI_SOPRA) | COFF(FARI_ESTERNI_SOTTO) );
   sleep(1);
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), COFF(FARI_ESTERNI_SOPRA) | CON(FARI_ESTERNI_SOTTO) );
@@ -149,6 +244,7 @@ int main () {
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), CON(FARI_ESTERNI_SOPRA) | CON(FARI_ESTERNI_SOTTO) );
   sleep(1);
   operate(mb_otb, OTB_OUT, (1<<FARI_ESTERNI_SOPRA) | (1<<FARI_ESTERNI_SOTTO), COFF(FARI_ESTERNI_SOPRA) | COFF(FARI_ESTERNI_SOTTO) );
+  **************************************************/
   
   /*
     if (interruttore(mb_otb,OTB_OUT,FARI_ESTERNI_SOPRA,TRUE) == 0) {
