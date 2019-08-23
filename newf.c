@@ -98,35 +98,6 @@ void logvalue(char *filename, char *message)
   fclose(logfile);
 }
 
-uint16_t interruttore (modbus_t *m, uint16_t R, const uint8_t COIL, const uint8_t V) {
-  /* 
-     ad ogni sua chiamata questa funzione inverte lo stato del bit COIL 
-     nel registro R a seconda del valore di V: V=TRUE 0->1, V=FALSE 1>0 
-  */
-  /*------------------------------------------*/  
-  /*---> Usa la MaskWrite FC22 del modbus <---*/
-  /*------------------------------------------*/
-  /* V=TRUE se transizione da 0->1, V=FALSE se transizione da 1->0 */
-  /* R num registro remoto (per OTB R = registro delle uscite ad indirizzo=100 */
-  /* COIL il numero del BIT del registro R da mettere a 1 o a 0 in base al valore di V */
-  /* IL TWIDO NON SUPPORTA LA FC022 !!! */
-  /* ---------------------------------- */
-  char errmsg[100];
-  uint16_t mask_coil;
-
-  mask_coil = (1<<COIL);
-  uint16_t and_mask = ~mask_coil; 
-  uint16_t or_mask = V ? mask_coil : ~mask_coil;    
-
-  // int modbus_write_registers(modbus_t *ctx, int addr, int nb, const uint16_t *src);
-  if (modbus_mask_write_register(m,R,and_mask,or_mask) == -1) {
-    sprintf(errmsg,"ERRORE nella funzione interruttore %s\n",modbus_strerror(errno));
-    logvalue(LOG_FILE,errmsg);
-    return -1;
-  }
-  return 0;
-}
-
 int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
 
   char errmsg[100];
@@ -147,7 +118,6 @@ int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
 
   return 0; 
 
-  /* printf("prima R = "); */
   /* printbitssimple(R); */
   /* R = (R & and_mask) | (or_mask & (~and_mask)); */
   /* printf("dopo R = "); */
@@ -175,7 +145,7 @@ int main (int argc, char *argv[]) {
   int opt;
   // put ':' in the starting of the
   // string so that program can
-  //distinguish between '?' and ':'
+  // distinguish between '?' and ':'
   while((opt = getopt(argc, argv, ":r:s:")) != -1)
     {
       switch(opt)
@@ -194,8 +164,7 @@ int main (int argc, char *argv[]) {
 	    SOTTOON(mb_otb, OTB_OUT);
 	  } else if (strcmp(optarg,"OFF") == 0) {
 	    SOTTOOFF(mb_otb, OTB_OUT);
-	  } else {printf("Argomento per r non valido\n");}
-	  
+	  } else {printf("Argomento per s non valido\n");}
 	  break;
 	case ':':
 	  printf("option needs a value\n");
