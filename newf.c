@@ -101,12 +101,14 @@ void logvalue(char *filename, char *message)
 int operate(modbus_t *m, uint16_t R, uint16_t coils, uint16_t actions) {
 
   char errmsg[100];
-  // IMPORTANTE: ormask e and mask sono costruite tenendo conto di:
-  // nella and_mask ci sono 0 per i bit che cambiano e 1 per quelli che non cambiano
-  // nella or_mask c'è 1 se il bit va da 0->1 e c'è 0 se il bit va da 1->0
-  // nella or_mask contano solo i bit che cambiano. Gli altri bit sono ininfluenti
-  // AND_MASK: per ogni bit che cambia metto 1: (1<<BITa)|(1<<BITb)|.....(BITn) e poi faccio la negazione trovandomi 0 dove cambiano e 1 dove rimangono invariati
-  // OR_MASK: se 0->1 (1<<BITa), se 1->0 (0<<BITb) facendo l'OR di tutti 
+  // IMPORTANTE: ormask e and mask sono costruite tenendo conto che:
+  //  - nella and_mask ci sono 0 per i bit che cambiano e 1 per quelli che non cambiano
+  //    passando la diff tra quelli della interazione prima e quelli della interazione dopo
+  //    la and_mask la ottengo facendo la negazione dei coils
+  //  - nella or_mask c'è 1 se il bit va da 0->1 e c'è 0 se il bit va da 1->0
+  //  - nella or_mask contano solo i bit che cambiano. Gli altri bit sono ininfluenti
+  //  - AND_MASK: per ogni bit che cambia metto 1: (1<<BITa)|(1<<BITb)|.....(BITn) e poi faccio la negazione trovandomi 0 dove cambiano e 1 dove rimangono invariati
+  //  - OR_MASK: se 0->1 (1<<BITa), se 1->0 (0<<BITb) facendo l'OR di tutti 
   uint16_t and_mask = ~coils;
   uint16_t or_mask  = actions;
 
@@ -140,40 +142,83 @@ int main (int argc, char *argv[]) {
     logvalue(LOG_FILE,errmsg);
     exit(EXIT_FAILURE);
   }
-
-  //-------------------------------------------------
-  int opt;
-  // put ':' in the starting of the
-  // string so that program can
-  // distinguish between '?' and ':'
-  while((opt = getopt(argc, argv, ":r:s:")) != -1)
-    {
-      switch(opt)
-	{
+  /*+++++++++++++++++++++++++++++++++++++++++++++++++*/
+  int opt; 
+  
+  // put ':' in the starting of the 
+  // string so that program can  
+  //distinguish between '?' and ':'  
+  while((opt = getopt(argc, argv, ":r:s:rs")) != -1)  
+    {  
+      switch(opt)  
+        {  
 	case 'r':
-	  printf("r: %s\n", optarg);
-	  if (strcmp(optarg,"ON") == 0) {
-	    SOPRAON(mb_otb, OTB_OUT);
-	  } else if (strcmp(optarg,"OFF") == 0) {
-	    SOPRAOFF(mb_otb, OTB_OUT);
-	  } else {printf("Argomento per r non valido\n");}
+	  if (strncmp(optarg,"on",2)==0 || strncmp(optarg,"off",3)==0) {
+	    printf("Faretti sopra: %s\n", optarg);
+	    if (strncmp(optarg,"on",2)==0) SOPRAON(mb_otb, OTB_OUT);
+	    if (strncmp(optarg,"off",3)==0) SOPRAOFF(mb_otb,OTB_OUT);
+	  } else {
+	    printf("on|off required for [%c]\n",opt);
+	  }
 	  break;
 	case 's':
-	  printf("s: %s\n", optarg);
-	  if (strcmp(optarg,"ON") == 0) {
-	    SOTTOON(mb_otb, OTB_OUT);
-	  } else if (strcmp(optarg,"OFF") == 0) {
-	    SOTTOOFF(mb_otb, OTB_OUT);
-	  } else {printf("Argomento per s non valido\n");}
+	  if (strncmp(optarg,"on",2)==0 || strncmp(optarg,"off",3)==0) {
+	    printf("Faretti sotto: %s\n", optarg);
+	    if (strncmp(optarg,"on",2)==0) SOTTOON(mb_otb, OTB_OUT);
+	    if (strncmp(optarg,"off",3)==0) SOTTOOFF(mb_otb,OTB_OUT);
+	  } else {
+	    printf("on|off required for [%c]\n",opt);
+	  }
 	  break;
-	case ':':
-	  printf("option needs a value\n");
-	  break;
-	case '?':
-	  printf("unknown option: %c\n", optopt);
-	break;
-	}
+	case ':':  
+	  printf("option needs a value [%c]\n",optopt);  
+	  break;  
+	case '?':  
+	  printf("unknown option: %c\n", optopt); 
+	  break;  
+        }  
     }  
+  
+  // optind is for the extra arguments 
+  // which are not parsed 
+  for(; optind < argc; optind++){      
+    printf("extra arguments: %s\n", argv[optind]);  
+  } 
+  /*+++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+  //-------------------------------------------------
+  /* int opt; */
+  /* // put ':' in the starting of the */
+  /* // string so that program can */
+  /* // distinguish between '?' and ':' */
+  /* while((opt = getopt(argc, argv, ":r:s:")) != -1) */
+  /*   { */
+  /*     switch(opt) */
+  /* 	{ */
+  /* 	case 'r': */
+  /* 	  printf("r: %s\n", optarg); */
+  /* 	  if (strcmp(optarg,"ON") == 0) { */
+  /* 	    SOPRAON(mb_otb, OTB_OUT); */
+  /* 	  } else if (strcmp(optarg,"OFF") == 0) { */
+  /* 	    SOPRAOFF(mb_otb, OTB_OUT); */
+  /* 	  } else {printf("Argomento per r non valido\n");} */
+  /* 	  break; */
+  /* 	case 's': */
+  /* 	  printf("s: %s\n", optarg); */
+  /* 	  if (strcmp(optarg,"ON") == 0) { */
+  /* 	    SOTTOON(mb_otb, OTB_OUT); */
+  /* 	  } else if (strcmp(optarg,"OFF") == 0) { */
+  /* 	    SOTTOOFF(mb_otb, OTB_OUT); */
+  /* 	  } else {printf("Argomento per s non valido\n");} */
+  /* 	  break; */
+  /* 	case ':': */
+  /* 	  printf("option needs a value\n"); */
+  /* 	  break; */
+  /* 	case '?': */
+  /* 	  printf("unknown option: %c\n", optopt); */
+  /* 	break; */
+  /* 	} */
+  /*   }   */
   //-------------------------------------------------
   
   /*

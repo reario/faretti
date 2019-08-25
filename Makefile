@@ -2,8 +2,8 @@
 
 CC = gcc
 # librerie e include per modbus
-INCDIR = /home/reario/include
-LIBDIR = /home/reario/lib
+INCDIR = /usr/local/include
+LIBDIR = /usr/local/lib
 
 # librerie e include per postgres
 LIBDB = /usr/local/pgsql/lib
@@ -14,13 +14,13 @@ DBINCDIR = /usr/include/postgresql/
 all: faretti newf t
 
 faretti: bit.o faretti.o
-	$(CC) -Wall -L${LIBDIR} -lmodbus $^ -o $@
+	$(CC) -Wall -L${LIBDIR} $^ -o $@ -lmodbus
 
 newf: newf.o
-	$(CC) -Wall -L${LIBDIR} -lmodbus $^ -o $@
+	$(CC) -Wall -L${LIBDIR} $^ -o $@ -lmodbus
 
 t: t.o
-	$(CC) -Wall -L${LIBDIR} -lmodbus $^ -o $@
+	$(CC) -Wall -L${LIBDIR} $^ -o $@ -lmodbus
 
 # vengono costruiti file object
 .c.o: gh.h
