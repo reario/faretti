@@ -148,7 +148,7 @@ int main (int argc, char *argv[]) {
   // put ':' in the starting of the 
   // string so that program can  
   //distinguish between '?' and ':'  
-  while((opt = getopt(argc, argv, ":r:s:rs")) != -1)  
+  while((opt = getopt(argc, argv, ":r:s:")) != -1)  
     {  
       switch(opt)  
         {  
